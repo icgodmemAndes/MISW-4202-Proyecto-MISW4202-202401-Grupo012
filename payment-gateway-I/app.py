@@ -36,4 +36,4 @@ db.init_app(app)
 db.create_all()
 
 if __name__ == '__main__':
-    app.run()
+    app.run(port=6000, debug=True)
