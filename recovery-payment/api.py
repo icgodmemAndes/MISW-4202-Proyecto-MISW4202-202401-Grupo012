@@ -168,6 +168,6 @@ if __name__ == '__main__':
     active_mq_thread = threading.Thread(target=active_mq_listener, daemon=True)
     active_mq_thread.start()
 
-    app.run(host='0.0.0.0', port=7000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
 
 
