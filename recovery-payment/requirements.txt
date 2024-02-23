@@ -1,0 +1,12 @@
+Flask
+flask-marshmallow
+Flask-RESTful
+Flask-SQLAlchemy
+SQLAlchemy
+marshmallow-sqlalchemy
+requests
+pika
+redis
+rq
+stomp.py
+json
