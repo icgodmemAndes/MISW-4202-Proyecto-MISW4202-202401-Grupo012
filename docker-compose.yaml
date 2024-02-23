@@ -1,0 +1,35 @@
+version: "3.2"
+services:
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+
+  queue:
+    image: apache/activemq-classic
+    environment:
+      ACTIVEMQ_OPTS: "-Djetty.host=0.0.0.0 -Djava.util.logging.config.file=logging.properties -Djava.security.auth.login.config=/opt/apache-activemq/conf/login.config"
+    ports:
+      - "61616:61616"
+      - "61613:61613"
+      - "8161:8161"
+
+  payment:
+    build: ./payment
+    working_dir: /backend/
+    depends_on:
+      - redis
+      - queue
+    command: /bin/sh -c 'python api.py'
+    environment:
+      PORT: 6000
+      HOST_REDIS: 'redis'
+      PORT_REDIS: 6379
+      HOST_QUEUE: 'queue'
+      PORT_QUEUE: 61613
+      HOST_GATEWAY_ONE: 'http://gateway-one:6000'
+      HOST_GATEWAY_TWO: 'http://gateway-two:6000'
+      QUEUE_NAME_ONE: 'one'
+      QUEUE_NAME_TWO: 'two'
+    ports:
+      - "6000:6000"

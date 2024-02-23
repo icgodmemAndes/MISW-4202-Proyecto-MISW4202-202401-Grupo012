@@ -1,0 +1,6 @@
+Flask==3.0.2
+Flask-RESTful==0.3.10
+Faker==23.2.1
+stomp.py==8.1.0
+redis==5.0.1
+requests==2.31.0
