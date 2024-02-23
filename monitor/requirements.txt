@@ -1,0 +1,6 @@
+Flask
+Flask-RESTful
+requests
+pika
+redis
+rqgt 
