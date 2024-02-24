@@ -38,4 +38,4 @@ db.init_app(app)
 db.create_all()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=os.environ.get('PORT', 6000), debug=True)
+    app.run(host='0.0.0.0', port=os.environ.get('PORT', 6000), debug=False)

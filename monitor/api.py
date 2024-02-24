@@ -4,6 +4,8 @@ from flask_restful import Api, Resource
 import datetime
 import redis
 import os
+import sched
+import time
 import threading
 
 hostRedis = os.environ.get('HOST_REDIS', 'localhost')
@@ -25,8 +27,8 @@ current_payment_gateway_status = {
 }
 
 hosts_payment_gateway = {
-    "payment_gate_way_one": os.environ.get('HOST_GATEWAY_ONE', 'http://localhost:6000'),
-    "payment_gate_way_two": os.environ.get('HOST_GATEWAY_TWO', 'http://localhost:6002'),
+    "payment_gate_way_one": os.environ.get('HOST_GATEWAY_ONE', 'http://localhost:6002'),
+    "payment_gate_way_two": os.environ.get('HOST_GATEWAY_TWO', 'http://localhost:6003'),
 }
 
 
@@ -45,7 +47,7 @@ def execute_ping_to_payment_gateways():
 def make_ping_to_payment_gateway(payment_gateway_name):
     try:
         payment_gateway_status_response = requests.get(f"{hosts_payment_gateway[payment_gateway_name]}/ping?echo=up")
-        response_text = payment_gateway_status_response.text.replace('\n', '').replace('"','')
+        response_text = payment_gateway_status_response.text.replace('\n', '').replace('"', '')
         print('[Response {}] is *{}*'.format(payment_gateway_name, response_text))
         response_text = response_text if response_text == 'up' else 'down'
 
@@ -53,12 +55,12 @@ def make_ping_to_payment_gateway(payment_gateway_name):
             payment_gateway_name] != response_text:
             notify_payment_gateway_status(payment_gateway_name, response_text)
 
-        elif payment_gateway_status_response.status_code != 200:
+        elif payment_gateway_status_response.status_code != 200 and current_payment_gateway_status[
+            payment_gateway_name] != response_text:
             notify_payment_gateway_status(payment_gateway_name, "down")
 
     except:
-        if current_payment_gateway_status[payment_gateway_name] != "down":
-            notify_payment_gateway_status(payment_gateway_name, "down")
+        notify_payment_gateway_status(payment_gateway_name, "down")
 
 
 def notify_payment_gateway_status(payment_gateway, new_payment_gateway_status):
@@ -79,8 +81,8 @@ def notify_payment_gateway_status(payment_gateway, new_payment_gateway_status):
 
 
 def repeat_task():
-    threading.Timer(0.5, execute_ping_to_payment_gateways).start()
-    threading.Timer(delayInterval, repeat_task).start()
+    execute_ping_to_payment_gateways()
+    scheduler.enter(delayInterval, 1, repeat_task, ())
 
 
 class MonitorHealthResource(Resource):
@@ -97,6 +99,14 @@ class PaymentGatewayHealthResource(Resource):
 api.add_resource(MonitorHealthResource, '/monitor/health-check')
 api.add_resource(PaymentGatewayHealthResource, '/monitor/test-ping/<string:payment_gateway_name>')
 
+scheduler = sched.scheduler(time.time, time.sleep)
+
+
+def run_sched():
+    repeat_task()
+    scheduler.run()
+
+
 if __name__ == '__main__':
-    threading.Timer(5, repeat_task).start()
-    app.run(debug=True, host='0.0.0.0', port=os.environ.get('PORT', 5003))
+    threading.Timer(5, run_sched).start()
+    app.run(debug=False, host='0.0.0.0', port=os.environ.get('PORT', 5003))

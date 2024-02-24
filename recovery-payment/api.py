@@ -93,7 +93,8 @@ class PaymentListener(stomp.ConnectionListener):
             )
             db.session.add(new_payment)
             db.session.commit()
-            print('NOTIFY PENDING PAYMENT RECEIVED -> {%s:%s:%s}' % (new_payment.id, new_payment.gateway, new_payment.value))
+            print('NOTIFY PENDING PAYMENT RECEIVED -> {%s:%s:%s}' % (
+                new_payment.id, new_payment.gateway, new_payment.value))
 
 
 def active_mq_listener():
@@ -133,14 +134,21 @@ def topic_stream():
                 process_payments()
 
 
+def mapper_to_gateway(payment):
+    return {
+        'id': payment.id,
+        'value': payment.value,
+        'gateway': payment.gateway,
+        'is_retry': payment.is_retry,
+    }
+
+
 def process_payments():
-    unproccesed_payment_one = None
-    unproccesed_payment_two = None
     if current_payment_gateway_status['payment_gate_way_one'] == 'up':
         unproccesed_payment_one = Payment.query.filter(Payment.gateway == 'one', Payment.processed == False).all()
         for payment in unproccesed_payment_one:
             payment.is_retry = True
-            response = requests.post(f"{hostOne}/execute_payment", json=payment_schema.dump(payment))
+            response = requests.post(f"{hostOne}/execute_payment", json=payment_schema.dump(mapper_to_gateway(payment)))
             if response.status_code == 200:
                 payment.processed = True
                 db.session.commit()
@@ -149,7 +157,7 @@ def process_payments():
         unproccesed_payment_two = Payment.query.filter(Payment.gateway == 'two', Payment.processed == False).all()
         for payment in unproccesed_payment_two:
             payment.is_retry = True
-            response = requests.post(f"{hostTwo}/execute_payment", json=payment_schema.dump(payment))
+            response = requests.post(f"{hostTwo}/execute_payment", json=payment_schema.dump(mapper_to_gateway(payment)))
             if response.status_code == 200:
                 payment.processed = True
                 db.session.commit()
@@ -181,4 +189,4 @@ if __name__ == '__main__':
     active_mq_thread = threading.Thread(target=active_mq_listener, daemon=True)
     active_mq_thread.start()
 
-    app.run(host='0.0.0.0', port=os.environ.get('PORT', 5000), debug=True)
+    app.run(host='0.0.0.0', port=os.environ.get('PORT', 5000), debug=False)

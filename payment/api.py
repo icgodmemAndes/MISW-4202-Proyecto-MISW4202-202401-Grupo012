@@ -198,4 +198,4 @@ if __name__ == '__main__':
     stomp_connect(conn)
     time.sleep(1)
     print('[Api] Running')
-    app.run(host='0.0.0.0', port=os.environ.get('PORT', 6000))
+    app.run(debug=False, host='0.0.0.0', port=os.environ.get('PORT', 6000))

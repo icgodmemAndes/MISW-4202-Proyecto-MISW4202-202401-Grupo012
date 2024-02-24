@@ -27,7 +27,7 @@ class PaymentProcessor:
         else:
             self.tracer.save("Payment Failed", payment.id)
             self.status.simulate_gateway_down()
-            return  "Payment Failed", 400
+            return "Payment Failed", 503
     
     def retry_payment(self, db, payment):
         if not self.status.is_gateway_alive():

@@ -16,6 +16,7 @@ class GatewayStatus:
         #initialize the gateway status
         self.db = db
         self.timer = None
+        self.set_gateway_status(GATEWAY_UP)
 
 
     def execute_ping(self, echo):
@@ -38,7 +39,7 @@ class GatewayStatus:
     def simulate_gateway_down(self):
         #Initialize a new timer with a random time from 10 to 25 seconds,
         #when the timer ends the gateway is up again
-        until = random.randint(5, 15)
+        until = random.randint(1, 2)
        
         #trace event
         self.set_gateway_status(GATEWAY_DOWN)
