@@ -1,0 +1,128 @@
+version: "3.2"
+services:
+  redis:
+    image: redis
+    container_name: redis-experiment
+    ports:
+      - "6379:6379"
+
+  queue:
+    image: apache/activemq-classic
+    container_name: queue-experiment
+    environment:
+      ACTIVEMQ_OPTS: "-Djetty.host=0.0.0.0 -Djava.util.logging.config.file=logging.properties -Djava.security.auth.login.config=/opt/apache-activemq/conf/login.config"
+    ports:
+      - "61616:61616"
+      - "61613:61613"
+      - "8161:8161"
+
+  payment-gateway-one:
+    build: ./payment-gateway-I
+    container_name: payment-gateway-one-experiment
+    working_dir: /backend/
+    volumes:
+      - ./payment-gateway-I/:/mnt/
+    environment:
+      PYTHONUNBUFFERED: 1
+      PORT: 6002
+      BD_PATH: 'sqlite:////mnt/payment-gateway-one.db'
+    ports:
+      - "6002:6002"
+    command: /bin/sh -c 'python app.py'
+
+  payment-gateway-two:
+    build: ./payment-gateway-I
+    container_name: payment-gateway-two-experiment
+    working_dir: /backend/
+    volumes:
+      - ./payment-gateway-I/:/mnt/
+    environment:
+      PYTHONUNBUFFERED: 1
+      PORT: 6003
+      BD_PATH: 'sqlite:////mnt/payment-gateway-two.db'
+    ports:
+      - "6003:6003"
+    command: /bin/sh -c 'python app.py'
+
+  payment:
+    build: ./payment
+    container_name: payment-experiment
+    working_dir: /backend/
+    volumes:
+      - ./wait:/wait
+    depends_on:
+      - redis
+      - queue
+      - payment-gateway-one
+      - payment-gateway-two
+    environment:
+      WAIT_HOSTS: queue:61613
+      WAIT_TIMEOUT: 200
+      PYTHONUNBUFFERED: 1
+      PORT: 6000
+      HOST_REDIS: 'redis'
+      PORT_REDIS: 6379
+      HOST_QUEUE: 'queue'
+      PORT_QUEUE: 61613
+      HOST_GATEWAY_ONE: 'http://payment-gateway-one:6002'
+      HOST_GATEWAY_TWO: 'http://payment-gateway-two:6003'
+      QUEUE_NAME_ONE: 'one'
+      QUEUE_NAME_TWO: 'two'
+      TOPIC_HEALTH: 'payment_gateway_status'
+    ports:
+      - "6000:6000"
+    command: bash -c "chmod +x /wait && /wait && echo 'Starting Payment' && python api.py"
+
+  recovery:
+    build: ./recovery-payment
+    container_name: recovery-payment-experiment
+    working_dir: /backend/
+    volumes:
+      - ./wait:/wait
+      - ./recovery-payment/:/mnt/
+    depends_on:
+      - redis
+      - queue
+      - payment-gateway-one
+      - payment-gateway-two
+    environment:
+      WAIT_HOSTS: queue:61613
+      WAIT_TIMEOUT: 200
+      PYTHONUNBUFFERED: 1
+      PORT: 6001
+      HOST_REDIS: 'redis'
+      PORT_REDIS: 6379
+      HOST_QUEUE: 'queue'
+      PORT_QUEUE: 61613
+      HOST_GATEWAY_ONE: 'http://payment-gateway-one:6002'
+      HOST_GATEWAY_TWO: 'http://payment-gateway-two:6003'
+      QUEUE_NAME_ONE: 'one'
+      QUEUE_NAME_TWO: 'two'
+      TOPIC_HEALTH: 'payment_gateway_status'
+      BD_PATH: 'sqlite:////mnt/recovery-exp.db'
+    ports:
+      - "6001:6001"
+    command: bash -c "chmod +x /wait && /wait && echo 'Starting Recovery Payment' && python api.py"
+
+  monitor:
+    build: ./monitor
+    container_name: monitor-experiment
+    working_dir: /backend/
+    depends_on:
+      - redis
+      - payment-gateway-one
+      - payment-gateway-two
+      - recovery
+      - payment
+    environment:
+      PYTHONUNBUFFERED: 1
+      PORT: 6004
+      HOST_REDIS: 'redis'
+      PORT_REDIS: 6379
+      HOST_GATEWAY_ONE: 'http://payment-gateway-one:6002'
+      HOST_GATEWAY_TWO: 'http://payment-gateway-two:6003'
+      DELAY_INTERVAL: 10
+      TOPIC_HEALTH: 'payment_gateway_status'
+    ports:
+      - "6004:6004"
+    command: /bin/sh -c 'python api.py'

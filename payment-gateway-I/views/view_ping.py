@@ -15,7 +15,7 @@ class ViewPing(Resource):
             echo = request.args.get('echo')
             return self.status.execute_ping(echo)
         except:
-            return 400, "Bad request"
+            return "Bad request", 400
 
             
             

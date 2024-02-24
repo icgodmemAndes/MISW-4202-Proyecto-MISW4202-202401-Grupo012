@@ -1,22 +1,36 @@
-import sched
-import time
 import requests
 from flask import Flask
 from flask_restful import Api, Resource
 import datetime
 import redis
+import os
+import sched
+import time
+import threading
+
+hostRedis = os.environ.get('HOST_REDIS', 'localhost')
+portRedis = os.environ.get('PORT_REDIS', 6379)
+
+delayInterval = int(os.environ.get('DELAY_INTERVAL', 15))
+topicHealth = os.environ.get('TOPIC_HEALTH', 'payment_gateway_status')
 
 app = Flask(__name__)
 app_context = app.app_context()
 app_context.push()
 api = Api(app)
 
-r = redis.StrictRedis('localhost', 6379, 0, charset='utf-8', decode_responses=True)
+r = redis.StrictRedis(hostRedis, portRedis, 0, charset='utf-8', decode_responses=True)
 
 current_payment_gateway_status = {
     "payment_gate_way_one": "",
     "payment_gate_way_two": "",
 }
+
+hosts_payment_gateway = {
+    "payment_gate_way_one": os.environ.get('HOST_GATEWAY_ONE', 'http://localhost:6002'),
+    "payment_gate_way_two": os.environ.get('HOST_GATEWAY_TWO', 'http://localhost:6003'),
+}
+
 
 def execute_ping_to_payment_gateways():
     now = datetime.datetime.now().replace(microsecond=0).time()
@@ -24,24 +38,31 @@ def execute_ping_to_payment_gateways():
 
     for payment_gateway in current_payment_gateway_status:
         make_ping_to_payment_gateway(payment_gateway)
-    
+
     now = datetime.datetime.now().replace(microsecond=0).time()
-    print('+-------END EXECUTION JOB SCHEDULER [%s]-------+\n' % now.isoformat(timespec='microseconds'))
+    print('+-------END EXECUTION JOB SCHEDULER [%s]-------+' % now.isoformat(timespec='microseconds'))
+    print('[Execute Ping] result {}'.format(str(current_payment_gateway_status)))
+
 
 def make_ping_to_payment_gateway(payment_gateway_name):
-        try:
-            payment_gateway_status_response = requests.get(f"http://{payment_gateway_name}:6000/ping")
+    try:
+        payment_gateway_status_response = requests.get(f"{hosts_payment_gateway[payment_gateway_name]}/ping?echo=up")
+        response_text = payment_gateway_status_response.text.replace('\n', '').replace('"', '')
+        print('[Response {}] is *{}*'.format(payment_gateway_name, response_text))
+        response_text = response_text if response_text == 'up' else 'down'
 
-            if payment_gateway_status_response.status_code==200 and current_payment_gateway_status[payment_gateway_name] != payment_gateway_status_response.echo:
-                notify_payment_gateway_status(payment_gateway_name, payment_gateway_status_response.echo)
+        if payment_gateway_status_response.status_code == 200 and current_payment_gateway_status[
+            payment_gateway_name] != response_text:
+            notify_payment_gateway_status(payment_gateway_name, response_text)
 
-            elif payment_gateway_status_response.status_code!=200:
-                notify_payment_gateway_status(payment_gateway_name, "down")
+        elif payment_gateway_status_response.status_code != 200 and current_payment_gateway_status[
+            payment_gateway_name] != response_text:
+            notify_payment_gateway_status(payment_gateway_name, "down")
 
-        except:
-            if current_payment_gateway_status[payment_gateway_name] != "down":
-                notify_payment_gateway_status(payment_gateway_name, "down") 
-    
+    except:
+        notify_payment_gateway_status(payment_gateway_name, "down")
+
+
 def notify_payment_gateway_status(payment_gateway, new_payment_gateway_status):
     current_status_pg = current_payment_gateway_status[payment_gateway]
 
@@ -49,32 +70,43 @@ def notify_payment_gateway_status(payment_gateway, new_payment_gateway_status):
         message = {payment_gateway: new_payment_gateway_status}
         current_payment_gateway_status[payment_gateway] = new_payment_gateway_status
 
-        r.publish('payment_gateway_status', str(message))
-        print('NOTIFY PAYMENT_GATWAY CHANGE STATE -> {%s:%s}' % (payment_gateway, new_payment_gateway_status))
+        r.publish(topicHealth, str(message))
+        print('NOTIFY PAYMENT_GATEWAY CHANGE STATE (%s) -> {%s:%s}' % (
+            topicHealth, payment_gateway, new_payment_gateway_status
+        ))
 
-    except:
+    except Exception as ex:
+        print('[Notify Status] error {}'.format(str(ex)))
         current_payment_gateway_status[payment_gateway] = current_status_pg
 
+
 def repeat_task():
-    scheduler.enter(0, 1, execute_ping_to_payment_gateways, ())
-    scheduler.enter(15, 1, repeat_task, ())
+    execute_ping_to_payment_gateways()
+    scheduler.enter(delayInterval, 1, repeat_task, ())
 
 
 class MonitorHealthResource(Resource):
     def get(self):
         return {"status": "up!"}
-    
-class PaymentGatewayHealthresource(Resource):
+
+
+class PaymentGatewayHealthResource(Resource):
     def get(self, payment_gateway_name):
-        make_ping_to_payment_gateway(payment_gateway_name) 
+        make_ping_to_payment_gateway(payment_gateway_name)
+        return {}
+
 
 api.add_resource(MonitorHealthResource, '/monitor/health-check')
-api.add_resource(PaymentGatewayHealthresource, '/monitor/test-ping/<string:payment_gateway_name>')
+api.add_resource(PaymentGatewayHealthResource, '/monitor/test-ping/<string:payment_gateway_name>')
+
 scheduler = sched.scheduler(time.time, time.sleep)
 
-repeat_task()
-scheduler.run()
+
+def run_sched():
+    repeat_task()
+    scheduler.run()
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5003)
+    threading.Timer(5, run_sched).start()
+    app.run(debug=False, host='0.0.0.0', port=os.environ.get('PORT', 5003))

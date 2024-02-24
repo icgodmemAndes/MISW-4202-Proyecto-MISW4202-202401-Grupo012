@@ -1,3 +1,6 @@
 .idea
-/monitor/venv/
+
 .venv
+**/venv
+
+**/**.db
