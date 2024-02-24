@@ -18,7 +18,7 @@ api = Api(app)
 hostRedis = os.environ.get('HOST_REDIS', 'localhost')
 portRedis = os.environ.get('PORT_REDIS', 6379)
 
-topicHealth = 'gateWayHealth'
+topicHealth = os.environ.get('TOPIC_HEALTH', 'payment_gateway_status')
 
 hostQueue = os.environ.get('HOST_QUEUE', 'localhost')
 portQueue = os.environ.get('PORT_QUEUE', 61613)
@@ -34,8 +34,12 @@ queueNameOne = os.environ.get('QUEUE_NAME_ONE', 'one')
 queueNameTwo = os.environ.get('QUEUE_NAME_TWO', 'two')
 
 statusGateways = {}
-statusError = 'error'
-statusDone = 'done'
+statusGatewaysMapper = {
+    'one': 'payment_gate_way_one',
+    'two': 'payment_gate_way_two',
+}
+statusError = 'down'
+statusDone = 'up'
 
 
 def redis_read(message):
@@ -43,8 +47,10 @@ def redis_read(message):
 
     if message['type'] == 'message' and message['data'] is not None:
         event = json.loads(message['data'].replace("'", '"'))
-        statusGateways[event['gateway']] = event['value']
-        print('[Redis] changed gateway status: {0}'.format(statusGateways))
+
+        for payment_gateway in event:
+            statusGateways[payment_gateway] = event[payment_gateway]
+            print('[Redis] changed gateway status: {0}'.format(statusGateways))
 
 
 def redis_subscribe():
@@ -86,7 +92,7 @@ class ConnectionListener(stomp.ConnectionListener):
 def request_to(body, gateway_name, queue_name, host_name):
     print('[REQUEST] to {0}'.format(gateway_name))
     try:
-        response = requests.post('{0}/execute_payment'.format(host_name), data=body)
+        response = requests.post('{0}/execute_payment'.format(host_name), json=body)
 
         if response.status_code == 200:
             result = {'error': '', 'details': response.json(), 'status': 'done'}
@@ -94,22 +100,29 @@ def request_to(body, gateway_name, queue_name, host_name):
             stomp_send(body, queue_name)
             result = {'error': '', 'details': response.json(), 'status': 'queueing'}
 
-        return {'result': result, 'gateway': gateway_name}
+        return {'id': body.get('id', None), 'result': result, 'gateway': gateway_name}
     except Exception as ex:
         print('[REQUEST] [{0}] throw error {1}'.format(gateway_name, str(ex)))
         stomp_send(body, queue_name)
         # Only Internal Payment Test
         # _redis.publish(topicHealth, str(body))
 
-        return {'result': {'error': str(ex), 'details': {}, 'status': 'pending'}, 'gateway': gateway_name}
+        return {
+            'id': body.get('id', None),
+            'result': {'error': str(ex), 'details': {}, 'status': 'queueing'},
+            'gateway': gateway_name,
+        }
 
 
 def request_queue(body, gateway_name, queue_name):
     print('[REQUEST] direct to queue {0}'.format(gateway_name))
     stomp_send(body, queue_name)
 
+    gateway_name_status = statusGatewaysMapper[gateway_name]
+
     return {
-        'result': {'error': '', 'details': {gateway_name: statusGateways[gateway_name]}, 'status': 'pending'},
+        'id': body.get('id', None),
+        'result': {'error': '', 'details': {gateway_name: statusGateways[gateway_name_status]}, 'status': 'queueing'},
         'gateway': gateway_name
     }
 
@@ -122,7 +135,9 @@ def request_generate(body):
 
     print('[REQUEST] current status {}'.format(statusGateways))
 
-    if statusGateways.get(gateway_name, None) is None or statusGateways.get(gateway_name) == statusDone:
+    gateway_name_status = statusGatewaysMapper[gateway_name]
+
+    if statusGateways.get(gateway_name_status, None) is None or statusGateways.get(gateway_name_status) == statusDone:
         response = request_to(body, gateway_name, queue_name, host_name)
     else:
         response = request_queue(body, gateway_name, queue_name)
@@ -146,6 +161,7 @@ class PaymentResource(Resource):
 
         if payment.get('gateway', None) is None or payment.get('value', None) is None:
             return {
+                'id': None,
                 'result': {'error': 'data incomplete', 'details': {}, 'status': 'invalid'},
                 'gateway': 'unknown'
             }, 400
@@ -154,6 +170,7 @@ class PaymentResource(Resource):
 
         if gateway != 'one' and gateway != 'two':
             return {
+                'id': None,
                 'result': {'error': 'gateway invalid', 'details': {}, 'status': 'invalid'},
                 'gateway': 'unknown'
             }, 400

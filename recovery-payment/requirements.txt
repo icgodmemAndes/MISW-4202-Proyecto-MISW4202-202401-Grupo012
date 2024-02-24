@@ -6,7 +6,6 @@ SQLAlchemy
 marshmallow-sqlalchemy
 requests
 pika
-redis
+redis==5.0.1
 rq
-stomp.py
-json
+stomp.py==8.1.0

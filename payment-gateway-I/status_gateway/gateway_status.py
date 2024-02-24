@@ -21,14 +21,19 @@ class GatewayStatus:
     def execute_ping(self, echo):
         #if the gateway is down return a 400 http status code, 
         #if not return a 200 http status code and the echo message
-        if not self.is_gateway_alive() or random.random() > 0.8:
+        rand = random.random()
+        alive = self.is_gateway_alive()
+
+        print('[Execute Ping] {}, {}'.format(alive, rand))
+
+        if not alive or rand > 0.8:
             #trace event
             self.tracer.save("Ping: Gateway is down", echo)
-            return 503, "Service is unavailable"
+            return "Service is unavailable", 503
         else:
             #trace event
             self.tracer.save("Ping: Gateway is up", echo)
-            return 200, echo
+            return echo, 200
     
     def simulate_gateway_down(self):
         #Initialize a new timer with a random time from 10 to 25 seconds,

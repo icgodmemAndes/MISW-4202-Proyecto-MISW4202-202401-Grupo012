@@ -15,9 +15,9 @@ class Event(db.Model):
 
 class Payment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    value = db.Column(db.String(100), nullable=False)
-    gateway = db.Column(db.Integer, nullable=False)
-    is_retry = db.Column(db.Boolean, nullable=False)
+    value = db.Column(db.Float, nullable=False)
+    gateway = db.Column(db.String(100), nullable=False)
+    is_retry = db.Column(db.Boolean, nullable=True, default=False)
 
 
 class PaymentSchema(SQLAlchemyAutoSchema):    

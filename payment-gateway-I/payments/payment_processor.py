@@ -14,7 +14,7 @@ class PaymentProcessor:
 
         if not self.status.is_gateway_alive():
             #return http service unavailable status code
-            return 503, "Gateway is down"
+            return "Gateway is down", 503
 
         if random.random() <= 0.8:
             db.session.add(payment)
@@ -23,22 +23,22 @@ class PaymentProcessor:
             #Save a new event to the db
             self.tracer.save("Payment Executed Succesfully", payment.id)
 
-            return 200, "Payment Executed Succesfully"
+            return "Payment Executed Successfully", 200
         else:
             self.tracer.save("Payment Failed", payment.id)
             self.status.simulate_gateway_down()
-            return 400 , "Payment Failed"
+            return  "Payment Failed", 400
     
     def retry_payment(self, db, payment):
         if not self.status.is_gateway_alive():
             #return http service unavailable status code
-            return 503, "Gateway is down"
+            return "Gateway is down", 503
         
         db.session.add(payment)
         db.session.commit()
 
         #trace event
         self.tracer.save("Payment Retried", payment.id)
-        return 200
+        return "Retry Payment Executed Successfully", 200
     
 
