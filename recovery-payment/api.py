@@ -23,11 +23,6 @@ hosts = [(host, port)]
 queue_name_one = os.environ.get('QUEUE_NAME_ONE', 'one')
 queue_name_two = os.environ.get('QUEUE_NAME_TWO', 'two')
 
-bd_path = os.environ.get('BD_PATH', 'sqlite:///recovery.db')
-
-# Database configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = bd_path
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 api = Api(app)
 
 current_payment_gateway_status = {
@@ -38,6 +33,7 @@ current_payment_gateway_status = {
 hostOne = os.environ.get('HOST_GATEWAY_ONE', 'http://localhost:6001')
 hostTwo = os.environ.get('HOST_GATEWAY_TWO', 'http://localhost:6002')
 
+
 # ActiveMQ Listener
 class PaymentListener(stomp.ConnectionListener):
     def on_error(self, frame):
@@ -47,7 +43,7 @@ class PaymentListener(stomp.ConnectionListener):
         with app.app_context():
             print('[on_message] Processing new messages: {}'.format(frame.body))
             message_translated = json.loads(frame.body.replace("'", '"'))
-            r.set('{}.{}'.format(message_translated['gateway'], message_translated['id']),frame.body)
+            r.set('{}.{}'.format(message_translated['gateway'], message_translated['id']), frame.body)
 
 
 def active_mq_listener():
@@ -66,7 +62,6 @@ def active_mq_listener():
 
 # Redis Subscriber
 def topic_stream():
-    
     pubsub = r.pubsub(ignore_subscribe_messages=True)
     pubsub.subscribe(redis_topic_name)
 
@@ -86,15 +81,16 @@ def topic_stream():
                     # Reprocess payment
                 process_payments()
 
+
 def process_payments():
     if current_payment_gateway_status['payment_gate_way_one'] == 'up':
         keys = r.keys("one.*")
         print(keys)
         for key in keys:
-            message = r.get(key) 
+            message = r.get(key)
             payment = json.loads(message.replace("'", '"'))
             payment['is_retry'] = True
-            response = requests.post(f"{hostOne}/execute_payment", json=json.dumps(payment))
+            response = requests.post(f"{hostOne}/execute_payment", json=payment)
             if response.status_code == 200:
                 r.delete(key)
                 print('[on_stream] PaymentOne processed: -> {%s:%s}' % (payment['id'], payment['value']))
@@ -104,7 +100,7 @@ def process_payments():
             message = r.get(key)
             payment = json.loads(message.replace("'", '"'))
             payment['is_retry'] = True
-            response = requests.post(f"{hostTwo}/execute_payment", json=json.dumps(payment))
+            response = requests.post(f"{hostTwo}/execute_payment", json=payment)
             if response.status_code == 200:
                 r.delete(key)
                 print('[on_stream] PaymentTwo processed -> {%s:%s}' % (payment['id'], payment['value']))

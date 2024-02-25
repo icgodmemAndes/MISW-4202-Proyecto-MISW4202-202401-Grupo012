@@ -99,7 +99,6 @@ services:
       QUEUE_NAME_ONE: 'one'
       QUEUE_NAME_TWO: 'two'
       TOPIC_HEALTH: 'payment_gateway_status'
-      BD_PATH: 'sqlite:////mnt/recovery-exp.db'
     ports:
       - "6001:6001"
     command: bash -c "chmod +x /wait && /wait && echo 'Starting Recovery Payment' && python api.py"

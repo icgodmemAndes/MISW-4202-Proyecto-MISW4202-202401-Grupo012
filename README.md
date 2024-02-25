@@ -17,3 +17,7 @@ docker rmi misw-4202-proyecto-misw4202-202401-grupo012-payment-gateway-one misw-
 ```shell
 docker-compose -f docker-compose.yaml up
 ```
+
+### Video example, Running Experiment
+
+[Link](https://uniandes-my.sharepoint.com/:v:/g/personal/c_zapatat_uniandes_edu_co/EUXte8jJT-1IrN-7vaH3Ot0B7wASCh5ltfnMlrapHw0JFg?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=SRhkAb)
