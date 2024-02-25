@@ -1,7 +1,5 @@
 from flask import Flask, request, Response
 from flask_restful import Api, Resource
-from flask_sqlalchemy import SQLAlchemy
-from flask_marshmallow import Marshmallow
 import redis
 import stomp
 import datetime
@@ -30,8 +28,6 @@ bd_path = os.environ.get('BD_PATH', 'sqlite:///recovery.db')
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = bd_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
-ma = Marshmallow(app)
 api = Api(app)
 
 current_payment_gateway_status = {
@@ -41,40 +37,6 @@ current_payment_gateway_status = {
 
 hostOne = os.environ.get('HOST_GATEWAY_ONE', 'http://localhost:6001')
 hostTwo = os.environ.get('HOST_GATEWAY_TWO', 'http://localhost:6002')
-
-
-# Models payment
-class Payment(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    value = db.Column(db.Float, nullable=False)
-    gateway = db.Column(db.String(100), nullable=False)
-    is_retry = db.Column(db.Boolean, nullable=True, default=False)
-    processed = db.Column(db.Boolean, nullable=True, default=False)
-
-
-class PaymentSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        fields = ("id", "value", "gateway", "is_retry", "processed")
-
-
-payment_schema = PaymentSchema()
-payments_schema = PaymentSchema(many=True)
-
-
-# Models health status
-class Health(db.Model):
-    component = db.Column(db.String(100), primary_key=True)
-    status = db.Column(db.String(100), nullable=False)
-
-
-class HealthSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        fields = ("component", "status")
-
-
-health_schema = HealthSchema()
-healths_schema = HealthSchema(many=True)
-
 
 # ActiveMQ Listener
 class PaymentListener(stomp.ConnectionListener):
@@ -132,7 +94,7 @@ def process_payments():
             message = r.get(key) 
             payment = json.loads(message.replace("'", '"'))
             payment['is_retry'] = True
-            response = requests.post(f"{hostOne}/execute_payment", json=payment_schema.dump(payment))
+            response = requests.post(f"{hostOne}/execute_payment", json=json.dumps(payment))
             if response.status_code == 200:
                 r.delete(key)
                 print('[on_stream] PaymentOne processed: -> {%s:%s}' % (payment['id'], payment['value']))
@@ -142,7 +104,7 @@ def process_payments():
             message = r.get(key)
             payment = json.loads(message.replace("'", '"'))
             payment['is_retry'] = True
-            response = requests.post(f"{hostTwo}/execute_payment", json=payment_schema.dump(payment))
+            response = requests.post(f"{hostTwo}/execute_payment", json=json.dumps(payment))
             if response.status_code == 200:
                 r.delete(key)
                 print('[on_stream] PaymentTwo processed -> {%s:%s}' % (payment['id'], payment['value']))
@@ -162,10 +124,6 @@ class TestPublishResource(Resource):
 api.add_resource(TestPublishResource, '/publish')
 
 if __name__ == '__main__':
-    # Create the database tables
-    with app.app_context():
-        db.create_all()
-
     # Start Redis subscriber and ActiveMQ listener in separate threads
     redis_thread = threading.Thread(target=topic_stream, daemon=True)
     redis_thread.start()
