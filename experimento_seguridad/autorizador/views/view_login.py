@@ -46,8 +46,6 @@ class ViewLogin(Resource):
                 self.trace_event.save('login', 'Invalid password')
                 self.attemp_handler.register_invalid_attemp(users.username)
                 return {'message': 'Cannot complete authentication process'}, 401
-
-
             
             self.trace_event.save('login', 'User authenticated')
             self.attemp_handler.reset_attemps(users.username)
@@ -57,7 +55,21 @@ class ViewLogin(Resource):
 
         except ValidationError as e:
             return e.messages, 400
+
+    def get(self):
+        token = request.headers.get('Authorization')
+        if token is None:
+            return {'message': 'Token not found'}, 400
         
+        try:
+            user = User.query.filter_by(user_id=token['user_id']).one_or_none()
+            if user is None:
+                return {'message': 'Token not valid'}, 401
+            if user.is_blocked:
+                return {'message': 'User has been blocked'}, 401
+            return {'message': 'User authenticated'}, 200
+        except:
+            return {'message': 'Token not valid'}, 401
     
     def block_user(self, username):
         user = User.query.filter_by(username=username).first()
