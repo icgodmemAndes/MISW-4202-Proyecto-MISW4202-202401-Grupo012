@@ -17,7 +17,7 @@ services:
       - "8161:8161"
 
   payment-gateway-one:
-    build: experimento_disponibilidad/payment-gateway-I
+    build: payment-gateway-I
     container_name: payment-gateway-one-experiment
     working_dir: /backend/
     volumes:
@@ -31,7 +31,7 @@ services:
     command: /bin/sh -c 'python app.py'
 
   payment-gateway-two:
-    build: experimento_disponibilidad/payment-gateway-I
+    build: payment-gateway-I
     container_name: payment-gateway-two-experiment
     working_dir: /backend/
     volumes:
@@ -45,7 +45,7 @@ services:
     command: /bin/sh -c 'python app.py'
 
   payment:
-    build: experimento_disponibilidad/payment
+    build: payment
     container_name: payment-experiment
     working_dir: /backend/
     volumes:
@@ -74,7 +74,7 @@ services:
     command: bash -c "chmod +x /wait && /wait && echo 'Starting Payment' && python api.py"
 
   recovery:
-    build: experimento_disponibilidad/recovery-payment
+    build: recovery-payment
     container_name: recovery-payment-experiment
     working_dir: /backend/
     volumes:
@@ -104,7 +104,7 @@ services:
     command: bash -c "chmod +x /wait && /wait && echo 'Starting Recovery Payment' && python api.py"
 
   monitor:
-    build: experimento_disponibilidad/monitor
+    build: monitor
     container_name: monitor-experiment
     working_dir: /backend/
     depends_on:
