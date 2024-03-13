@@ -1,6 +1,6 @@
 cd ..
 from faker import Faker
-from api import db
+from app import db
 from models import *
 
 db.create_all()
