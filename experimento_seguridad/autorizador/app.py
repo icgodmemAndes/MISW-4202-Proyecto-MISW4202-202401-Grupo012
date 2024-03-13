@@ -3,6 +3,7 @@ from flask import Flask
 from flask_cors import CORS
 from flask_restful import Api
 from views.view_login import ViewLogin
+from views.view_validate import ViewValidate
 from models import db
 from flask_jwt_extended import JWTManager
 
@@ -18,6 +19,11 @@ def create_flask_app():
 
     jwt = JWTManager(_app)
 
+    @jwt.user_lookup_loader
+    def user_lookup_callback(_jwt_header, jwt_data):
+        identity = jwt_data['sub']
+        return identity['user_id']
+
     app_context = _app.app_context()
     app_context.push()
     add_urls(_app)
@@ -31,6 +37,7 @@ def create_flask_app():
 def add_urls(_app):
     api = Api(_app)
     api.add_resource(ViewLogin, '/login')
+    api.add_resource(ViewValidate, '/validate_token')
 
 
 app = create_flask_app()
