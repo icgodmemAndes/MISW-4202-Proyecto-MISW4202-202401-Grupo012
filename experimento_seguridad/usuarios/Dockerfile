@@ -1,10 +1,6 @@
-
-FROM python:3
+FROM python:3.9.6
 RUN mkdir /backend
 WORKDIR /backend
 ADD requirements.txt /backend/
-ADD api.py /backend/
-ADD ./* /backend/
 RUN pip install -r requirements.txt
-ADD * /backend/
-EXPOSE 5000
+ADD . /backend/

@@ -9,6 +9,7 @@ from models import db, UserSchema, create_event, get_user
 
 user_schema = UserSchema()
 
+roles_valid = ['basic_user', 'premium_user', 'full_access']
 
 class HealthSource(Resource):
 
@@ -25,7 +26,7 @@ class ProfileSource(Resource):
         token = current_user
         user_id = token['user_id']
 
-        if token['roles'] is None or 'guest' not in token['roles']:
+        if token['roles'] is None or token['roles'] not in roles_valid:
             create_event('do_not_have_roles', '{}'.format(token['roles']), None if user_id is None else user_id)
             return {'error': 'Not authorized', 'code': 1}, 401
 
@@ -69,7 +70,7 @@ def create_flask_app():
         identity = jwt_data['sub']
         user_id = identity['user_id']
         roles = '{}'.format(identity['roles'])
-        data = {'user_id': user_id, 'roles': roles.split(',')}
+        data = {'user_id': user_id, 'roles': roles}
 
         return data
 
