@@ -32,6 +32,10 @@ class ViewLogin(Resource):
             if current_attemps >= 3:
                 self.trace_event.save('login', 'User has been blocked')
                 self.block_user(users.username)
+            
+            if user.is_blocked:
+                self.trace_event.save('login', 'User blocked')
+                return {'message': 'User has been blocked'}, 401
 
             if user is None:
                 self.trace_event.save('login', 'User not found') 
@@ -43,9 +47,7 @@ class ViewLogin(Resource):
                 self.attemp_handler.register_invalid_attemp(users.username)
                 return {'message': 'Cannot complete authentication process'}, 401
 
-            if user.is_blocked:
-                self.trace_event.save('login', 'User blocked')
-                return {'message': 'User has been blocked'}, 401
+
             
             self.trace_event.save('login', 'User authenticated')
             self.attemp_handler.reset_attemps(users.username)
