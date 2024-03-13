@@ -13,13 +13,13 @@ app = None
 
 def create_initial_data():
     from models import User
-    user1 = User(username='admin', password='admin123!@#', user_id=1, roles='admin, user')
-    user2 = User(username='username', password='password', user_id=2,  roles='user')
-    user3 = User(username='guest', password='password', user_id=3, roles='guest')
-    db.session.add(user1)
-    db.session.add(user2)
-    db.session.add(user3)
-    db.session.commit()
+    ##user1 = User(username='admin', password='admin123!@#', user_id=1, roles='admin, user')
+    ##user2 = User(username='username', password='password', user_id=2,  roles='user')
+    ##user3 = User(username='guest', password='password', user_id=3, roles='guest')
+    ##db.session.add(user1)
+    ##db.session.add(user2)
+    ##db.session.add(user3)
+    ##db.session.commit()
 
 def create_flask_app():
     app = Flask(__name__)
