@@ -11,6 +11,7 @@ services:
       PORT: 6000
       BD_PATH: 'sqlite:////mnt/autorizador.db'
       PHRASE_SECRET: 'expe_security'
+      DEBUG: 'false'
     command: /bin/sh -c 'python build_database.py && python app.py'
 
   usuarios:
@@ -24,6 +25,7 @@ services:
       PORT: 6000
       BD_PATH: 'sqlite:////mnt/usuarios.db'
       PHRASE_SECRET: 'expe_security'
+      DEBUG: 'false'
     command: /bin/sh -c 'python build_database.py && python api.py'
 
   nginx:

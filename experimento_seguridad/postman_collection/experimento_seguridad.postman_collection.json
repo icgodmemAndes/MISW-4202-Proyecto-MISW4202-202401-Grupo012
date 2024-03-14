@@ -13,15 +13,20 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"const idUser = +(postman.getGlobalVariable(\"idUser\") || 0) - 1;",
+							"pm.test(\"autenticado\", function () {",
+							"    const idUser = +(postman.getGlobalVariable(\"idUser\") || 0) - 1;",
 							"",
-							"var jsonData = JSON.parse(responseBody);",
+							"    var jsonData = JSON.parse(responseBody);",
 							"",
-							"const token = jsonData.token;",
+							"    const token = jsonData.token;",
 							"",
-							"if (token) {",
-							"    postman.setGlobalVariable(`expe_token_${idUser}`, token);",
-							"}"
+							"    if (token) {",
+							"        postman.setGlobalVariable(`expe_token_${idUser}`, token);",
+							"    }",
+							"",
+							"    pm.response.to.have.status(200);",
+							"});",
+							""
 						],
 						"type": "text/javascript",
 						"packages": {}
@@ -43,7 +48,7 @@
 							"",
 							"pm.request.body.raw = JSON.stringify(json);",
 							"",
-							"console.log('Inicio', 'idUser', idUser, 'totalRequest', totalRequest, 'currentIteration', currentIteration, 'password', password);",
+							"/* console.log('Inicio', 'idUser', idUser, 'totalRequest', totalRequest, 'currentIteration', currentIteration, 'password', password); */",
 							"",
 							"idUser = idUser <= 18 ? (idUser + 1) : 0;",
 							"",
@@ -54,7 +59,7 @@
 							"currentIteration = Math.floor(totalRequest / 20);",
 							"postman.setGlobalVariable(\"currentIteration\", currentIteration);",
 							"",
-							"console.log('Fin', 'idUser', idUser, 'totalRequest', totalRequest, 'currentIteration', currentIteration);",
+							"/* console.log('Fin', 'idUser', idUser, 'totalRequest', totalRequest, 'currentIteration', currentIteration); */",
 							"",
 							""
 						],
@@ -107,7 +112,7 @@
 							"const idUser = +(postman.getGlobalVariable(\"idUser\") || 0) - 1;",
 							"const token = postman.getGlobalVariable(`expe_token_${idUser}`);",
 							"",
-							"console.log('Profile', 'idUser', idUser, 'token', token);",
+							"// console.log('Profile', 'idUser', idUser, 'token', token);",
 							"",
 							"pm.request.headers.add({",
 							"  key: \"authorization\",",
