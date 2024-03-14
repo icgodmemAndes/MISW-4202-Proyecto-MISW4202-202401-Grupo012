@@ -1,26 +1,42 @@
 # MISW-4202-Proyecto-MISW4202-202401-Grupo012
 
-### Delete old containers
+## Members
+
+| **Name**                        | **Email**                   |
+|---------------------------------|-----------------------------|
+| Jhon Edinson Muñoz Riaños       | je.munozr1@uniandes.edu.co  |
+| Juan Carlos Torres Machuca      | jc.torresm1@uniandes.edu.co |
+| Cristian Eduardo Parada Criales | c.paradac@uniandes.edu.co   |
+| Cristian Zapata Torres          | c.zapatat@uniandes.edu.co   |
+
+---
+
+## Availability Experiment
+
+### Steps
+
+1.
 
 ```shell
-docker rm autorizador-experiment usuarios-experiment nginx-experiment
+cd experimento_disponibilidad
 ```
 
-### Delete old images
+2.
+
+Following *[README.md](experimento_disponibilidad/README.md)* on *experimento_disponibilidad*
+
+---
+
+## Security Experiment
+
+### Steps
+
+1.
 
 ```shell
-docker rmi experimento_seguridad-autorizador experimento_seguridad-usuarios
+cd experimento_seguridad
 ```
 
-### Run All Apps
+2.
 
-```shell
-docker-compose -f docker-compose.yaml up
-```
-
-### Run with SH
-```shell
-sh run.sh
-```
-
-### Video example, Running Experiment
+Following *[README.md](experimento_seguridad/README.md)* on *experimento_seguridad*
