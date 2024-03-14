@@ -1,0 +1,216 @@
+{
+	"info": {
+		"_postman_id": "2eaccb1d-9205-4080-bdb9-53277ea3e8df",
+		"name": "Experimento Seguridad",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "5528678"
+	},
+	"item": [
+		{
+			"name": "Login",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const idUser = +(postman.getGlobalVariable(\"idUser\") || 0) - 1;",
+							"",
+							"var jsonData = JSON.parse(responseBody);",
+							"",
+							"const token = jsonData.token;",
+							"",
+							"if (token) {",
+							"    postman.setGlobalVariable(`expe_token_${idUser}`, token);",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"let idUser = +(postman.getGlobalVariable(\"idUser\") || 0);",
+							"let totalRequest = +(postman.getGlobalVariable(\"totalRequest\") || 0);",
+							"let currentIteration = +(postman.getGlobalVariable(\"currentIteration\") || 0);",
+							"",
+							"let password = idUser <= (19 - (currentIteration*2)) ? idUser : 'attack_psw';",
+							"",
+							"const json = JSON.parse(pm.request.body.raw);",
+							"json.username = `user_${idUser}`;",
+							"json.password = `pass_${password}`;",
+							"",
+							"pm.request.body.raw = JSON.stringify(json);",
+							"",
+							"console.log('Inicio', 'idUser', idUser, 'totalRequest', totalRequest, 'currentIteration', currentIteration, 'password', password);",
+							"",
+							"idUser = idUser <= 18 ? (idUser + 1) : 0;",
+							"",
+							"postman.setGlobalVariable(\"idUser\", idUser);",
+							"totalRequest = (totalRequest + 1)",
+							"postman.setGlobalVariable(\"totalRequest\", totalRequest);",
+							"",
+							"currentIteration = Math.floor(totalRequest / 20);",
+							"postman.setGlobalVariable(\"currentIteration\", currentIteration);",
+							"",
+							"console.log('Fin', 'idUser', idUser, 'totalRequest', totalRequest, 'currentIteration', currentIteration);",
+							"",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcxMDMwMjAzMSwianRpIjoiMTYzOTgxZTUtZTkxMy00Y2NhLWJiN2ItNzVlZDg2ZmQyZDVkIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6eyJ1c2VyX2lkIjozLCJyb2xlcyI6Imd1ZXN0In0sIm5iZiI6MTcxMDMwMjAzMSwiY3NyZiI6IjdmYjk0ZGYxLTZmYmMtNDQyOS04ZjYzLTY4YTk5MjI4Yzg4ZiIsImV4cCI6MTcxMDMwNTYzMX0.bhGekX3gwv7vYgB_X6SKSFVQWlHdsoIyyPHFTgzeHjA",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"drop\",\n    \"password\": \"use_5\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{security-server}}/login",
+					"host": [
+						"{{security-server}}"
+					],
+					"path": [
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Profile",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const idUser = +(postman.getGlobalVariable(\"idUser\") || 0) - 1;",
+							"const token = postman.getGlobalVariable(`expe_token_${idUser}`);",
+							"",
+							"console.log('Profile', 'idUser', idUser, 'token', token);",
+							"",
+							"pm.request.headers.add({",
+							"  key: \"authorization\",",
+							"  value: `Bearer ${token}`,",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"correct\", function () {",
+							"    const response = JSON.parse(pm.response.text())",
+							"",
+							"    if (response.code === 1) {",
+							"        pm.response.to.have.status(401);",
+							"    } else if (response.email) {",
+							"        pm.response.to.have.status(200);",
+							"    } else {",
+							"        // Fallo intencional",
+							"        pm.response.to.have.status(200);",
+							"    }",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{security-server}}/profile",
+					"host": [
+						"{{security-server}}"
+					],
+					"path": [
+						"profile"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Valid_Token",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{expe_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{security-server}}/validate_token",
+					"host": [
+						"{{security-server}}"
+					],
+					"path": [
+						"validate_token"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "security-server",
+			"value": "http://127.0.0.1:6010",
+			"type": "string"
+		}
+	]
+}

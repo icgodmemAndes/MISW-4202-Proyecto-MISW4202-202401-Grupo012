@@ -7,7 +7,7 @@ db.create_all()
 
 faker = Faker()
 
-for i in range(10):
+for i in range(20):
     user_name = faker.unique.word()
     user = User(id=i, full_name=user_name, email=f"{user_name}@{faker.word()}.com",
                 plan=faker.random.choice([PlanType.BASIC.value, PlanType.PREMIUM.value]))
